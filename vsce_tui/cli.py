@@ -6,9 +6,15 @@ import os
 import sys
 import termios
 import tty
+import json
 
 # --- Configuration ---
-CSV_FILE = os.path.expanduser("~/.config/vsce-ext-manager.csv")  # Linux-specific path
+# CSV_FILE is now dynamically generated in get_current_profile()
+
+# ANSI escape codes for color
+GREEN = '\033[92m'
+RED = '\033[91m'
+RESET = '\033[0m'
 
 # --- Data Model ---
 def load_extensions():
@@ -87,14 +93,14 @@ def display_tui(extensions):
             # Clear the screen (cross-platform)
             os.system('cls' if os.name == 'nt' else 'clear')
 
-            print("VS Code Extension Manager (Press 't' to toggle, 'q' to quit and apply, 'x' to quit without applying)")
+            print("VS Code Extension Manager (Press 't' or 'Space' to toggle, 'q' to quit and apply, 'x' to quit without applying, 'w' to apply)")
 
             # Display only the extensions within the viewport
             for i in range(viewport_start, min(viewport_start + viewport_size, len(extensions))):
                 ext = extensions[i]
-                status_char = "I" if ext['status'] == 'Installed' else "U"
+                status_char = f"{GREEN}✓{RESET}" if ext['status'] == 'Installed' else f"{RED}✗{RESET}"  # Unicode checkmark/X with color
                 marker = ">" if i == current_index else " "
-                print(f"{marker} [{status_char}] {ext['extension_id']}")
+                print(f"{marker} {status_char} {ext['extension_id']}") # No brackets
 
             key = getch().lower()
 
@@ -103,7 +109,9 @@ def display_tui(extensions):
                 break
             elif key == 'x':
                 break  # Quit without applying changes
-            elif key == 't':
+            elif key == 'w':
+                apply_changes(extensions)  # Apply changes
+            elif key == 't' or key == ' ':  # Toggle on 't' or Spacebar
                 if extensions[current_index]['status'] == 'Installed':
                     extensions[current_index]['status'] = 'Uninstalled'
                 else:
@@ -136,8 +144,8 @@ def display_tui(extensions):
     else:  # Piped input mode - just display once
         print("VS Code Extension Manager (Extensions loaded from pipe)")
         for i, ext in enumerate(extensions):
-            status_char = "I" if ext['status'] == 'Installed' else "U"
-            print(f"  [{status_char}] {ext['extension_id']}")
+            status_char = "✓" if ext['status'] == 'Installed' else "✗"  # Unicode checkmark/X
+            print(f"  {status_char} {ext['extension_id']}")
         print("Changes will be applied when you run the script interactively.")
 
 
@@ -151,9 +159,35 @@ def apply_changes(extensions):
                 subprocess.run(['code-insiders', '--install-extension', ext['extension_id']], check=False) # Use code-insiders
             #  Do nothing if status is 'Uninstalled' - just keep it in the CSV
 
+def get_user_data_dir():
+    """Gets the VS Code user data directory based on the OS."""
+    if sys.platform == 'win32':
+        return os.path.join(os.environ['APPDATA'], 'Code - Insiders')
+    elif sys.platform == 'darwin':
+        return os.path.expanduser('~/Library/Application Support/Code - Insiders')
+    else:  # Linux
+        return os.path.expanduser('~/.config/Code - Insiders')
+
+def get_current_profile():
+    """Gets the current VS Code profile name from argv.json."""
+    user_data_dir = get_user_data_dir()
+    argv_path = os.path.join(user_data_dir, 'argv.json')
+    try:
+        with open(argv_path, 'r') as f:
+            argv = json.load(f)
+            return argv.get('profile-name', 'Default')  # Default profile name
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        return 'Default'
+
 # --- Main ---
+CONFIG_DIR = os.path.expanduser("~/.config/vsce_tui")
+CSV_FILE = os.path.join(CONFIG_DIR, f"vsce-ext-manager_{get_current_profile()}.csv")
+
 def main():
     """Main function."""
+    # Create the config directory if it doesn't exist
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+
     if len(sys.argv) > 1 and sys.argv[1] == 'clean':
         clean_extensions()
     else:
