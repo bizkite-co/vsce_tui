@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vsce_tui"
-version = "0.1.0"  # Remember to update the version!
+version = "0.1.1"  # Remember to update the version!
 authors = [
   { name = "Your Name", email = "your.email@example.com" },
 ]
