@@ -15,17 +15,31 @@ def load_extensions():
     """Loads extensions from the CSV file or creates it if it doesn't exist."""
     extensions = []
     if os.path.exists(CSV_FILE):
-        os.remove(CSV_FILE)  # Force deletion of the CSV file
-    # Get extensions from stdin (piped from `code --list-extensions`)
-    ext_list_output = subprocess.check_output(
-        "code-insiders --list-extensions", shell=True, text=True  # Use code-insiders
-    ).strip()
+        with open(CSV_FILE, 'r', newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                extensions.append(row)
+        # Get current extensions and add any new ones
+        current_ext_list = subprocess.check_output(
+            "code-insiders --list-extensions", shell=True, text=True
+        ).strip()
+        current_ext_ids = [line for line in current_ext_list.split('\n') if "." in line]
+        existing_ext_ids = [ext['extension_id'] for ext in extensions]
+        for ext_id in current_ext_ids:
+            if ext_id not in existing_ext_ids:
+                extensions.append({'extension_id': ext_id, 'status': 'Installed', 'changed': False})
+        save_extensions(extensions) # Save any new extensions
+    else:
+        # Get extensions from stdin (piped from `code --list-extensions`)
+        ext_list_output = subprocess.check_output(
+            "code-insiders --list-extensions", shell=True, text=True  # Use code-insiders
+        ).strip()
 
-    for line in ext_list_output.split('\n'):
-        if "." in line:  # Skip lines that don't look like extension IDs
-            extensions.append({'extension_id': line, 'status': 'Installed', 'changed': False})
+        for line in ext_list_output.split('\n'):
+            if "." in line:  # Skip lines that don't look like extension IDs
+                extensions.append({'extension_id': line, 'status': 'Installed', 'changed': False})
 
-    save_extensions(extensions) # Save to create initial file
+        save_extensions(extensions) # Save to create initial file
     return extensions
 
 def save_extensions(extensions):
@@ -35,6 +49,19 @@ def save_extensions(extensions):
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(extensions)
+
+def clean_extensions():
+    """Refreshes the list of extensions in the CSV file."""
+    extensions = []
+    ext_list_output = subprocess.check_output(
+        "code-insiders --list-extensions", shell=True, text=True
+    ).strip()
+
+    for line in ext_list_output.split('\n'):
+        if "." in line:
+            extensions.append({'extension_id': line, 'status': 'Installed', 'changed': False})
+    save_extensions(extensions)
+    print("Extension list cleaned and refreshed.")
 
 # --- TUI ---
 def getch():
@@ -127,9 +154,12 @@ def apply_changes(extensions):
 # --- Main ---
 def main():
     """Main function."""
-    extensions = load_extensions()
-    display_tui(extensions)
-    save_extensions(extensions) # Always save, even if no changes are applied
+    if len(sys.argv) > 1 and sys.argv[1] == 'clean':
+        clean_extensions()
+    else:
+        extensions = load_extensions()
+        display_tui(extensions)
+        save_extensions(extensions) # Always save, even if no changes are applied
     # apply_changes(extensions) is now called within display_tui when 'q' is pressed
 
 if __name__ == "__main__":
