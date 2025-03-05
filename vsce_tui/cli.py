@@ -145,18 +145,25 @@ def display_tui(extensions):
         print("VS Code Extension Manager (Extensions loaded from pipe)")
         for i, ext in enumerate(extensions):
             status_char = "✓" if ext['status'] == 'Installed' else "✗"  # Unicode checkmark/X
-            print(f"  {status_char} {ext['extension_id']}")
+            print(f"  [{status_char}] {ext['extension_id']}")
         print("Changes will be applied when you run the script interactively.")
 
 
 # --- VS Code Interaction ---
 def apply_changes(extensions):
     """Applies the changes (install/uninstall) to VS Code."""
+
+    current_ext_list = subprocess.check_output(
+        "code-insiders --list-extensions", shell=True, text=True
+    ).strip()
+    current_ext_ids = [line for line in current_ext_list.split('\n') if "." in line]
+
     for ext in extensions:
         if ext['changed']:  # Only process changed extensions
             if ext['status'] == 'Installed':
-                print(f"Installing {ext['extension_id']}...")
-                subprocess.run(['code-insiders', '--install-extension', ext['extension_id']], check=False) # Use code-insiders
+                if ext['extension_id'] not in current_ext_ids:  # Only install if not already installed
+                    print(f"Installing {ext['extension_id']}...")
+                    subprocess.run(['code-insiders', '--install-extension', ext['extension_id']], check=False) # Use code-insiders
             #  Do nothing if status is 'Uninstalled' - just keep it in the CSV
 
 def get_user_data_dir():
