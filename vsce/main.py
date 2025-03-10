@@ -164,7 +164,10 @@ def apply_changes(extensions):
                 if ext['extension_id'] not in current_ext_ids:  # Only install if not already installed
                     print(f"Installing {ext['extension_id']}...")
                     subprocess.run(['code-insiders', '--install-extension', ext['extension_id']], check=False) # Use code-insiders
-            #  Do nothing if status is 'Uninstalled' - just keep it in the CSV
+            elif ext['status'] == 'Uninstalled':
+                if ext['extension_id'] in current_ext_ids:  # Only uninstall if currently installed
+                    print(f"Uninstalling {ext['extension_id']}...")
+                    subprocess.run(['code-insiders', '--uninstall-extension', ext['extension_id']], check=False)
 
 def get_user_data_dir():
     """Gets the VS Code user data directory based on the OS."""
@@ -187,7 +190,7 @@ def get_current_profile():
         return 'Default'
 
 # --- Main ---
-CONFIG_DIR = os.path.expanduser("~/.config/vsce_tui")
+CONFIG_DIR = os.path.expanduser("~/.config/vsce")
 CSV_FILE = os.path.join(CONFIG_DIR, f"vsce-ext-manager_{get_current_profile()}.csv")
 
 def main():

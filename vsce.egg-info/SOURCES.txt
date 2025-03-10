@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+vsce/__init__.py
+vsce/cli.py
+vsce/main.py
+vsce.egg-info/PKG-INFO
+vsce.egg-info/SOURCES.txt
+vsce.egg-info/dependency_links.txt
+vsce.egg-info/entry_points.txt
+vsce.egg-info/top_level.txt

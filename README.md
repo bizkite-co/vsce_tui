@@ -1,45 +1,53 @@
-# vsce_tui
+# vsce
 
 A TUI tool for managing VS Code extensions.
 
 ## Installation
 
-Once published to PyPI:
-
 ```bash
-pip install vsce_tui
+pip install vsce
 ```
 
 ## Usage
 
-After installation:
-
 ```bash
-code-insiders --list-extensions | vsce_tui  # Initial population of the list
-vsce_tui  # Run the interactive TUI
+code-insiders --list-extensions | vsce  # Initial population of the list
+vsce  # Run the interactive TUI
 ```
 
-To run without installing (for development/testing):
+### Running Directly (For Development)
 
 ```bash
-python vsce_tui/cli.py  # Run directly
-code-insiders --list-extensions | python vsce_tui/cli.py # Initial population
-```
-To clean the extension list
-
-```bash
-python vsce_tui/cli.py clean
+python vsce/main.py  # Run directly
+code-insiders --list-extensions | python vsce/main.py # Initial population
 ```
 
-Use the arrow keys (or 'j' and 'k') to navigate, 't' or Spacebar to toggle extension status, 'q' to quit and apply changes, 'x' to quit *without* applying changes, and 'w' to apply changes without quitting.
-
-## Development
+Clean the extension list (useful if you manually uninstall extensions):
 
 ```bash
-git clone https://github.com/yourusername/vsce_tui # Replace with your repo
-cd vsce_tui
+python vsce/main.py clean
+```
+
+### Development
+
+```bash
+git clone https://github.com/yourusername/vsce # Replace with your repo
+cd vsce
 uv venv
-source .venv/bin/activate  # On Linux/macOS
-.venv\Scripts\activate  # On Windows
-pip install -e .
+uv pip install -e .[dev]
 ```
+
+### Publishing a New Version
+
+1.  Update the version number in `pyproject.toml`.
+2.  Clean the `dist/` directory:
+    ```bash
+    rm -rf dist/
+    ```
+3.  Build the package:
+    ```bash
+    python -m build
+    ```
+4.  Upload the package to PyPI:
+    ```bash
+    python -m twine upload dist/*
